@@ -1,1 +1,0 @@
-avrdude -c usbasp -p m8 -U eeprom:w:NiMh_Charger.eep:i

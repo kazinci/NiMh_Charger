@@ -28,6 +28,7 @@
 #include "lcd.h"
 
 
+
 /* 
 ** constants/macros 
 */
@@ -284,47 +285,19 @@ loops while lcd is busy, returns address counter
 static uint8_t lcd_waitbusy(void)
 
 {
-    register uint8_t c;
+	
+    //register uint8_t c;
     
     /* wait until busy flag is cleared */
-	
-    while ( (c=lcd_read(0)) & (1<<LCD_BUSY)) {}
+    //while ( (c=lcd_read(0)) & (1<<LCD_BUSY)) {}
     
     /* the address counter is updated 4us after the busy flag is cleared */
-    delay(2);
-
+    //delay(2);
+	delay(2048);
     /* now read the address counter */
     return (lcd_read(0));  // return address counter
     
 }/* lcd_waitbusy */
-
-
-
-/*************************************************************************
-check if LCD connected
-*************************************************************************/
-uint8_t lcd_test(void)
-{
-	register uint8_t lcd_ok = 0;
-	register uint8_t c;
-	
-	for(uint8_t i = 1; i < 20; i++)
-	{
-		if (((c=lcd_read(0)) & (1<<LCD_BUSY)) == 0)
-		{
-			lcd_ok = 1;
-			break;
-		}
-		else
-		{
-			lcd_ok = 0;
-		}
-		delay(i);
-	}
-	
-	return lcd_ok; 
-	
-	}
 
 
 /*************************************************************************
@@ -583,33 +556,26 @@ void lcd_init(uint8_t dispAttr)
     }
     delay(16000);        /* wait 16ms or more after power-on       */
     
-	
-	
     /* initial write to lcd is 8bit */
     LCD_DATA1_PORT |= _BV(LCD_DATA1_PIN);  // _BV(LCD_FUNCTION)>>4;
     LCD_DATA0_PORT |= _BV(LCD_DATA0_PIN);  // _BV(LCD_FUNCTION_8BIT)>>4;
     lcd_e_toggle();
     delay(4992);         /* delay, busy flag can't be checked here */
    
-   
-	
     /* repeat last command */ 
     lcd_e_toggle();      
     delay(64);           /* delay, busy flag can't be checked here */
     
-	
     /* repeat last command a third time */
     lcd_e_toggle();      
     delay(64);           /* delay, busy flag can't be checked here */
-	
-	
+
     /* now configure for 4bit mode */
     LCD_DATA0_PORT &= ~_BV(LCD_DATA0_PIN);   // LCD_FUNCTION_4BIT_1LINE>>4
     lcd_e_toggle();
     delay(64);           /* some displays need this additional delay */
     
-    /* from now the LCD only accepts 4 bit I/O, we can use lcd_command() */  
-	 
+    /* from now the LCD only accepts 4 bit I/O, we can use lcd_command() */    
 #else
     /*
      * Initialize LCD to 8 bit memory mapped mode
@@ -634,11 +600,11 @@ void lcd_init(uint8_t dispAttr)
 	lcd_command(KS0073_4LINES_MODE);
 	lcd_command(KS0073_EXTENDED_FUNCTION_REGISTER_OFF);
 #else
-    //lcd_command(LCD_FUNCTION_DEFAULT);      /* function set: display lines  */
+    lcd_command(LCD_FUNCTION_DEFAULT);      /* function set: display lines  */
 #endif
-    //lcd_command(LCD_DISP_OFF);              /* display off                  */
-    //lcd_clrscr();                           /* display clear                */ 
-    //lcd_command(LCD_MODE_DEFAULT);          /* set entry mode               */
-    //lcd_command(dispAttr);                  /* display/cursor control       */
+    lcd_command(LCD_DISP_OFF);              /* display off                  */
+    lcd_clrscr();                           /* display clear                */ 
+    lcd_command(LCD_MODE_DEFAULT);          /* set entry mode               */
+    lcd_command(dispAttr);                  /* display/cursor control       */
 
 }/* lcd_init */

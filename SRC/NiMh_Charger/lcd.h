@@ -255,7 +255,6 @@ extern void lcd_command(uint8_t cmd);
 */
 extern void lcd_data(uint8_t data);
 
-extern uint8_t lcd_test(void);
 
 /**
  @brief macros for automatically storing string constant in program memory
@@ -263,5 +262,4 @@ extern uint8_t lcd_test(void);
 #define lcd_puts_P(__s)         lcd_puts_p(PSTR(__s))
 
 /*@}*/
-
 #endif //LCD_H
