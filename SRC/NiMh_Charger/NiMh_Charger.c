@@ -12,7 +12,7 @@
  * Version 1.0
  *
  * The entire project, including schematic can be found at:
- *  ... 
+ *  https://github.com/kazinci/NiMh_Charger 
  *
  *
  * LCD, UART and I2C library copyright  Peter Fleury 
@@ -40,18 +40,18 @@
 /************************************************************************/
 #include <avr/io.h>
 #include "NiMh_Charger.h"
-#include <stdlib.h> // abs(), itoa()
-#include <stdarg.h> // variable number argument function
-#include <avr/pgmspace.h> // PROGMEM
-#include <avr/eeprom.h> // EEMEM
-#include <avr/interrupt.h> // Timer (seconds, minutes)
+#include <stdlib.h>					// abs(), itoa()
+#include <stdarg.h>					// variable number argument function
+#include <avr/pgmspace.h>			// PROGMEM
+#include <avr/eeprom.h>				// EEMEM
+#include <avr/interrupt.h>			// Timer (seconds, minutes)
 #include <util/delay.h>
-#include <avr/sleep.h> // sleep when Charger stops
-#include <avr/wdt.h> // watchdog
-#include <util/atomic.h> // interrupt-secure routines
+#include <avr/sleep.h>				// sleep when Charger stops
+#include <avr/wdt.h>				// watchdog
+#include <util/atomic.h>			// interrupt-secure routines
 #include "lcd.h"
-#include "uart.h" // for debug
-#include "i2cmaster.h" // used for temperature reading
+#include "uart.h"					// for debug
+#include "i2cmaster.h"				// used for temperature reading
 
 
 /************************************************************************/
@@ -64,47 +64,47 @@
 
 char		buffer[8]; //UART buffer
 // NDV and FDV
-uint8_t		neg_db = NDV_SAMPLES; // ndv counter (negative delta voltage)
-uint16_t	fdv_db = FDV_SAMPLES; // fdv counter (flat delta V)
-uint8_t		peak_db = PEAK_UPDATE_SAMPLES; // If voltage is higher "peak_db"-times = > update "peak_voltage" value
-uint16_t	peak_voltage = 0; // if voltage is rising, new voltage value saved here
+uint8_t		neg_db = NDV_SAMPLES;				// ndv counter (negative delta voltage)
+uint16_t	fdv_db = FDV_SAMPLES;				// fdv counter (flat delta V)
+uint8_t		peak_db = PEAK_UPDATE_SAMPLES;		// If voltage is higher "peak_db"-times = > update "peak_voltage" value
+uint16_t	peak_voltage = 0;					// if voltage is rising, new voltage value saved here
 // ADC oversampling and approximation
 uint16_t	voltage_in_ADC = 0; 
 uint16_t	current_in_ADC = 0; 
-uint8_t		ramp = RAMP_UP_TIME; //timeout to set charging current
+uint8_t		ramp = RAMP_UP_TIME;				//timeout to set charging current
 // these variables are changed by interrupt-routine, so they are must be declared as volatile
-uint8_t volatile	seconds = 0; // 0...59
-uint16_t volatile	minutes = 0; // 0...59
-uint8_t volatile	timer1_tick = 0; // 0...4
+//uint8_t volatile	seconds = 0; // 0...59
+//uint16_t volatile	minutes = 0; // 0...59
+//uint8_t volatile	timer1_tick = 0; // 0...4
 // Hardware components check
-uint8_t		isTempOk_1 = 0; // I2C device_1 check flag, O: NOK, 1: OK
-uint8_t		isTempOk_2 = 0; // I2C device_2 check flag, O: NOK, 1: OK
+//uint8_t		isTempOk_1 = 0;						// I2C device_1 check flag, O: NOK, 1: OK
+//uint8_t		isTempOk_2 = 0;						// I2C device_2 check flag, O: NOK, 1: OK
 //uint8_t		lcd_ok = 0; // 
-uint8_t		isDischarged = 0; // to hold discharged status flag (boolean)
+uint8_t		isDischarged = 0;						// to hold discharged status flag (boolean)
 // Debug information about charging times
 //uint16_t		time_in_precharge_mode = 0;
 //uint16_t		time_in_fastcharge_mode = 0;
-uint16_t		trickle_end_timer = 0; // Timer for trickle charge, charging halts when this timer ends.
+uint16_t		trickle_end_timer = 0;				// Timer for trickle charge, charging halts when this timer ends.
 // absorbed mAh's by battery, summed after every mode
-uint16_t	mAh = 0;
+//uint16_t	mAh = 0;
 // MENU items
-uint8_t menuItem = 0; 
-uint8_t	battery_number = 1; // selected battery
-uint8_t		mode = 0; //charger modes, see defines above
+uint8_t		menuItem = 0; 
+uint8_t		battery_number = 1;						// selected battery
+uint8_t		mode = 0;								//charger modes, see defines above
 
 
 
-uint8_t		mcucsr __attribute__((section(".noinit"))); // Mirror of the MCUCSR register, taken early during startup.
-uint8_t		saved_batt_num __attribute__((section(".noinit"))); // batt_num variable back-up if watchdog reset occurs
-uint8_t		saved_mode __attribute__((section(".noinit"))); // mode variable back-up if watchdog reset occurs
-uint16_t	saved_minute __attribute__((section(".noinit"))); // minute variable back-up if watchdog reset occurs
+uint8_t		mcucsr __attribute__((section(".noinit")));				// Mirror of the MCUCSR register, taken early during startup.
+uint8_t		saved_batt_num __attribute__((section(".noinit")));		// batt_num variable back-up if watchdog reset occurs
+uint8_t		saved_mode __attribute__((section(".noinit")));			// mode variable back-up if watchdog reset occurs
+uint16_t	saved_minute __attribute__((section(".noinit")));		// minute variable back-up if watchdog reset occurs
 
 
 // Stored variables in EEPROM
-uint16_t EEMEM eep_batt_capacity = 2500; // Battery Capacity is 2500 mAh for default, user changeable through "Menu"
+uint16_t EEMEM eep_batt_capacity = 2500;							// Battery Capacity is 2500 mAh for default, user changeable through "Menu"
 uint16_t EEMEM eep_charge_mode = FASTCHARGE_MODE;
-uint16_t EEMEM eep_trickle_charge_time = 16*60; // 16 hour by default
-uint16_t EEMEM eep_discharge = 0; // Do not discharge by default
+uint16_t EEMEM eep_trickle_charge_time = 16*60;						// 16 hour by default
+uint16_t EEMEM eep_discharge = 0;									// Do not discharge configured by default
 
 // Buttons								left,	select,	down,	right,	up 
 const uint16_t buttondata[5] PROGMEM ={	176,	87,		650,	960,	0};
@@ -150,20 +150,20 @@ const char string29[] PROGMEM = "MAX VOLTAGE";
 volatile struct Time
 {
 	// these variables are changed by interrupt-routine, so they are must be declared as volatile
-	uint8_t volatile	seconds; // 0...59
-	uint16_t volatile	minute; // 0...59
-	uint8_t volatile	timer1_tick; // 0...4
+	uint8_t volatile	seconds:6;			// 0...59 (2^6=64)
+	uint16_t volatile	minute:6;			// 0...59
+	uint8_t volatile	timer1_tick:2;		// 0...4 (2^2=4)
 } time;
  
  // TODO: use struct
 struct Battery
 { 
-	uint16_t volt:12; //0...2560 (2^12=4096)
-	uint16_t amp:12; //0...2560
-	uint16_t temp:7; //0...127 (2^7 =128)
-	uint8_t tempSensorOk:1; //0...1 
-	struct Time t;
-	// TODO: add mah, time
+	uint16_t volt:12;						//0...2560 (2^12=4096)
+	uint16_t amp:12;						//0...2560
+	uint16_t temp:7;						//0...127 (2^7 =128)
+	uint16_t mah:12;						// 0...4096 (2^12 =4096)
+	uint8_t tempSensorOk:1;					//0...1 
+	struct Time t;	
 };
 
 
@@ -179,7 +179,13 @@ int main (void) {
 	uint16_t precharge_max_current = 0;
 	uint16_t fastcharge_max_current = 0;
 	uint16_t trickle_max_current = 0;
-	 
+		
+	struct Battery battery_1 = {0, 0, 0, 0, 0,{0, 0, 0}};
+	struct Battery *pBattery_1 = &battery_1;
+	
+	struct Battery battery_2 = {0, 0, 0, 0, 0,{0, 0, 0}};
+	struct Battery *pBattery_2 = &battery_2;
+		 
 	
 	/* Initializations */
 	// Disable MOSFET transistors
@@ -201,8 +207,8 @@ int main (void) {
 	// Enable global interrupts (UART and Timer1 is interrupt driven)
 	sei(); 	
 	// check if temperature measuring devices are connected
-	isTempOk_1 = init_TMP75(1);
-	isTempOk_2 = init_TMP75(2);
+	pBattery_1 -> tempSensorOk = init_TMP75(1);
+	pBattery_2 -> tempSensorOk = init_TMP75(2);
 	
 	// If watchdog activated continue with that point from where the reset occurred 
 	if ((mcucsr & _BV(WDRF)) == _BV(WDRF))
@@ -296,7 +302,7 @@ int main (void) {
 		
 		wdt_enable(WDTO_2S);
 		// reset these variables for every battery
-		mAh = 0;
+		//mAh = 0;
 		neg_db = NDV_SAMPLES;
 		fdv_db = FDV_SAMPLES;
 		peak_db = PEAK_UPDATE_SAMPLES;
@@ -658,7 +664,7 @@ uint8_t Charge_Battery(uint8_t battery_number, uint16_t max_current, const char 
 				if (mode != next_mode)
 				{
 					// Calculate absorbed mAh's in this mode
-					mAh += ((uint32_t)current * time.minute ) / 60;
+					//mAh += ((uint32_t)current * time.minute ) / 60;
 					
 					// If only 1 battery charged yet, skip trickle mode,
 					// because this mode takes long time
@@ -950,11 +956,11 @@ uint16_t Read_temperature(uint8_t select)
 	switch (select)
 	{
 		case 1:
-			if (!isTempOk_1) return 0; //if no device found do not continue
+			if (!(pBattery_1 -> tempSensorOk)) return 0; //if no device found do not continue
 			address = DEVICE_ADDRESS1;
 			break;
 		case 2:
-			if (!isTempOk_2) return 0; //if no device found do not continue
+			if (!(pBattery_2 -> tempSensorOk)) return 0; //if no device found do not continue
 			address = DEVICE_ADDRESS2;
 			break;
 		default: 
